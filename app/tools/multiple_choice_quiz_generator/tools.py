@@ -49,19 +49,20 @@ class QuizBuilderConfig:
     
     def __init__(
         self,
-        model = GoogleGenerativeAI(model="gemini-1.5-pro"),
-        embedding_model = GoogleGenerativeAIEmbeddings(model='models/embedding-001'),
-        vectorstore_class = Chroma,
+        model = None,
+        embedding_model = None,
+        vectorstore_class = None,
         max_questions: int = 10,
         min_questions: int = 1,
         max_attempts: int = 2,
         prompt_template_path: str = "prompt/multiple_choice_quiz_generator_prompt.txt",
         multi_query_prompt_path: str = "prompt/multi_query_prompt.txt",
-        verbose: bool = False,
+        parser: JsonOutputParser = None,
+        verbose: bool = False
     ):
-        self.model = model
-        self.embedding_model = embedding_model
-        self.vectorstore_class = vectorstore_class
+        self.model = model or GoogleGenerativeAI(model="gemini-1.5-pro") 
+        self.embedding_model = embedding_model or GoogleGenerativeAIEmbeddings(model='models/embedding-001')
+        self.vectorstore_class = vectorstore_class or Chroma
         self.max_questions = max_questions
         self.min_questions = min_questions
         self.max_attempts = max_attempts
@@ -73,8 +74,7 @@ class QuizBuilderConfig:
         self.prompt_template = read_text_file(self.prompt_template_path)
         self.multi_query_prompt_template = read_text_file(self.multi_query_prompt_path)
 
-
-        self.parser = JsonOutputParser(pydantic_object=QuizQuestionsList)
+        self.parser = parser or JsonOutputParser(pydantic_object=QuizQuestionsList)
 
 class QuizBuilder:
     def __init__(self, topic: str, lang: str ='en', config: QuizBuilderConfig = None, verbose: bool = False):
@@ -82,23 +82,27 @@ class QuizBuilder:
         self.lang = lang
         self.config = config or QuizBuilderConfig(verbose=verbose)
 
-        self.verbose = self.config.verbose
+        self.verbose = verbose
         self.runner = None
+        self._model = self.config.model
+        self._prompt_template = self.config.prompt_template
+        self._parser = self.config.parser
+
 
         # Initialize components
         self.vectorstore_manager = VectorStoreManager(self.config)
-        self.retriever_factory = RetrieverFactory(self.config, self.config.model)
+        self.retriever_factory = RetrieverFactory(self.config)
 
         if topic is None: raise ValueError("Topic must be provided")
     
     def compile(self, documents: List[Document], num_questions: int):
         # Return the chain
+        if self.verbose: logger.info(f"Compiling chain")
+
         number_documents = len(documents)
 
         if self.runner is None:
-            logger.info(f"Creating vectorstore from {len(documents)} documents") if self.verbose else None
             vectorstore = self.vectorstore_manager.create_vectorstore(documents)
-            logger.info(f"Vectorstore created") if self.verbose else None
             retriever_k = number_documents
             retriever = self.retriever_factory.create_multiquery_retriever(
                     vectorstore, num_questions, retriever_k)
@@ -111,19 +115,19 @@ class QuizBuilder:
             )
 
         prompt = PromptTemplate(
-            template=self.config.prompt_template,
+            template=self._prompt_template,
             input_variables=[{"attribute_collection"}],
-            partial_variables={"format_instructions": self.config.parser.get_format_instructions(), 
+            partial_variables={"format_instructions": self._parser.get_format_instructions(), 
                                "num_questions": num_questions
                                }
         )
-        smith_metadata = {
+        trace_metadata = {
             "number_documents": number_documents,
             "n_questions": num_questions,
             "topic": self.topic,
             "lang": self.lang
         }
-        chain = (self.runner | prompt | self.config.model | self.config.parser).with_config(smith_metadata)
+        chain = (self.runner | prompt | self._model | self._parser).with_config(trace_metadata)
         
         if self.verbose: logger.info(f"Chain compilation complete")
         
@@ -189,7 +193,6 @@ class QuizBuilder:
             except Exception as e:
                 if self.verbose:
                     logger.error(f"Error generating questions: {e}")
-                break
             attempts += 1
 
         number_generated_questions = len(generated_questions)
@@ -207,12 +210,11 @@ class QuizBuilder:
 
 class RetrieverFactory:
     
-    def __init__(self, config: QuizBuilderConfig, model):
-        self.config = config
-        self.model = model
+    def __init__(self, config: QuizBuilderConfig):
         self.verbose = config.verbose
-        self._retriever = None
-        self._vectorstore = None
+
+        self._model = config.model
+        self._prompt_template = config.multi_query_prompt_template
     
     def create_multiquery_prompt(self, num_questions: int) -> PromptTemplate:
         try:
@@ -221,7 +223,7 @@ class RetrieverFactory:
                 partial_variables={
                     "num_questions": num_questions,
                 },
-                template=self.config.multi_query_prompt_template
+                template=self._prompt_template
             )
         except Exception as e:
             logger.error(f"Failed to create multiquery prompt: {e}") if self.verbose else None
@@ -239,10 +241,10 @@ class RetrieverFactory:
             raise Exception(f"Base retriever creation failed: {str(e)}")
 
     def create_multiquery_chain(self, prompt: PromptTemplate):
-        """Create the multiquery chain"""
+        # Create the multiquery chain
         try:
             output_parser = QueryListOutputParser()
-            return prompt | self.model | output_parser
+            return prompt | self._model | output_parser
         except Exception as e:
             logger.error(f"Failed to create multiquery chain: {e}")
             raise Exception(f"Chain creation failed: {str(e)}")
@@ -280,9 +282,11 @@ class VectorStoreManager:
     
     def __init__(self, config: 'QuizBuilderConfig'):
         self.config = config
+        self.verbose = config.verbose
+        self._vectorstore_class = self.config.vectorstore_class
+        self._embedding_model = self.config.embedding_model 
+        
         self._vectorstore = None
-        self._retriever = None
-        self._embedding_model = None 
     
     @property
     def vectorstore(self):
@@ -290,36 +294,23 @@ class VectorStoreManager:
             self._vectorstore = self.create_vectorstore()
         return self._vectorstore
     
-    @property
-    def embedding_model(self):
-        if self._embedding_model is None:
-            self._embedding_model = self.config.embedding_model
-        return self._embedding_model
-    
     @traceable(run_type="embedding")
     def create_vectorstore(self, documents: List[Document]):
 
-        logger.info(f"Creating vectorstore from {len(documents)} documents") if self.config.verbose else None
-        self._vectorstore = self.config.vectorstore_class.from_documents(
+        logger.info(f"Creating vectorstore from {len(documents)} documents") if self.verbose else None
+        self._vectorstore = self._vectorstore_class.from_documents(
             documents, 
-            self.embedding_model
+            self._embedding_model
         )
-        logger.info(f"Vectorstore created") if self.config.verbose else None
+        logger.info(f"Vectorstore created") if self.verbose else None
         return self._vectorstore
     
-    def get_retriever(self, num_documents: int):
-        if not self._retriever:
-            self._retriever = self.vectorstore.as_retriever(
-                search_kwargs={"k": num_documents}
-            )
-        return self._retriever
-    
     def cleanup(self):
-        if self.config.verbose: logger.info(f"Deleting vectorstore")
+        if self.verbose: logger.info(f"Deleting vectorstore")
         if self._vectorstore:
             self._vectorstore.delete_collection()
             self._vectorstore = None
-            self._retriever = None
+            self._vectorstore_class = None
 
 class QueryListOutputParser(BaseOutputParser[List[str]]):
     # Output parser for a list of lines.
