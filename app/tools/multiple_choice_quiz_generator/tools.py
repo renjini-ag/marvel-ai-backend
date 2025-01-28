@@ -60,7 +60,7 @@ class QuizBuilderConfig:
         parser: JsonOutputParser = None,
         verbose: bool = False
     ):
-        self.model = model or GoogleGenerativeAI(model="gemini-1.5-pro") 
+        self.model = model or GoogleGenerativeAI(model="gemini-1.5-pro", max_output_tokens=None ) 
         self.embedding_model = embedding_model or GoogleGenerativeAIEmbeddings(model='models/embedding-001')
         self.vectorstore_class = vectorstore_class or Chroma
         self.max_questions = max_questions
