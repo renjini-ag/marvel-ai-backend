@@ -77,7 +77,18 @@ class QuizBuilderConfig:
         self.parser = parser or JsonOutputParser(pydantic_object=QuizQuestionsList)
 
 class QuizBuilder:
+            
     def __init__(self, topic: str, lang: str ='en', config: QuizBuilderConfig = None, verbose: bool = False):
+
+        """
+            Initialize the QuizBuilder with configuration and models.
+            
+            Args:
+                topic (str): The main topic for quiz questions
+                lang (str): Language code for question generation (default: 'en')
+                config (QuizBuilderConfig): Configuration object for the quiz builder (default: None)   
+                verbose (bool): Enable detailed logging (default: False)
+        """
         self.topic = topic
         self.lang = lang
         self.config = config or QuizBuilderConfig(verbose=verbose)
@@ -96,68 +107,71 @@ class QuizBuilder:
         if topic is None: raise ValueError("Topic must be provided")
     
     def compile(self, documents: List[Document], num_questions: int):
-        # Return the chain
-        if self.verbose: logger.info(f"Compiling chain")
+        """
+        Compile the question generation chain using the provided documents.
+        
+        Args:
+            documents (List[Document]): List of documents to use as context
+            num_questions (int): Number of questions to generate per prompt (default: 1)
+            
+        Returns:
+            Chain: A compiled LangChain chain for question generation
+        """
+        # Initialize prompt template with all required variables
+        prompt = PromptTemplate(
+            template=self._prompt_template,
+            input_variables=["attribute_collection", "context", "num_questions"],
+            partial_variables={"format_instructions": self._parser.get_format_instructions()}
+        )
 
         number_documents = len(documents)
 
+        # Create vector store and retriever if not already initialized
         if self.runner is None:
+            # Log vector store creation if verbose mode is enabled
             vectorstore = self.vectorstore_manager.create_vectorstore(documents)
             retriever_k = number_documents
             retriever = self.retriever_factory.create_multiquery_retriever(
                     vectorstore, num_questions, retriever_k)
 
+            # Set up parallel running configuration with all required components
             self.runner = RunnableParallel(
                 {
-                "context": retriever, 
-                "attribute_collection": RunnablePassthrough()
+                "context": retriever, # Retrieves relevant context from documents
+                "attribute_collection": RunnablePassthrough(),  # Passes through the topic and language
+                "num_questions": lambda _: str(num_questions)  # Converts num_questions to string for template
                 }
             )
 
-        prompt = PromptTemplate(
-            template=self._prompt_template,
-            input_variables=[{"attribute_collection"}],
-            partial_variables={"format_instructions": self._parser.get_format_instructions(), 
-                               "num_questions": num_questions
-                               }
-        )
         trace_metadata = {
             "number_documents": number_documents,
             "n_questions": num_questions,
             "topic": self.topic,
             "lang": self.lang
         }
+
+        # Compile the full chain: runner -> prompt -> model -> parser
         chain = (self.runner | prompt | self._model | self._parser).with_config(trace_metadata)
         
-        if self.verbose: logger.info(f"Chain compilation complete")
+        logger.info(f"Chain compilation complete") if self.verbose else None
         
         return chain
 
-    def validate_response(self, response: Dict) -> bool:
-        try:
-            # Assuming the response is already a dictionary
-            if isinstance(response, dict):
-                if 'question' in response and 'choices' in response and 'answer' in response and 'explanation' in response:
-                    choices = response['choices']
-                    if isinstance(choices, dict):
-                        for key, value in choices.items():
-                            if not isinstance(key, str) or not isinstance(value, str):
-                                return False
-                        return True
-            return False
-        except TypeError as e:
-            if self.verbose:
-                logger.error(f"TypeError during response validation: {e}")
-            return False
-
-    def format_choices(self, choices: Dict[str, str]) -> List[Dict[str, str]]:
-        return [{"key": k, "value": v} for k, v in choices.items()]
-    
     def create_questions(self, documents: List[Document], num_questions: int = 5) -> List[Dict]:
-        if self.verbose: logger.info(f"Creating {num_questions} questions")
+        """
+        Generate multiple-choice quiz questions based on the provided documents.
+        
+        Args:
+            documents (List[Document]): List of documents to use as context
+            num_questions (int): Number of questions to generate (default: 5)
+            
+        Returns:
+            List[Dict]: List of generated quiz questions with choices and answers
+        """
+        logger.info(f"Creating {num_questions} questions") if self.verbose else None
      
         if num_questions > self.config.max_questions:
-            return {"message": "error", "data": "Number of questions cannot exceed 10"}
+            return {"message": "error", "data": f"Number of questions cannot exceed {self.config.max_questions}"}
         
         chain = self.compile(documents, num_questions)
         
@@ -165,7 +179,7 @@ class QuizBuilder:
         attempts = 0
         max_attempts = self.config.max_attempts  # Allow for more attempts to generate questions
 
-        while len(generated_questions) == 0 and attempts < max_attempts:
+        while len(generated_questions) < num_questions and attempts < max_attempts:
             if self.verbose:
                 logger.info(f"Running pipeline. Attempt {attempts + 1} of {max_attempts}")
 
@@ -176,6 +190,11 @@ class QuizBuilder:
                 logger.info(f"Generated response: {response}")
                 if response is None: next
 
+                # response = transform_json_dict(response)
+                # if self.validate_response(response):
+                #     # Format choices and add valid question to results
+                #     response["choices"] = self.format_choices(response["choices"])
+                #     generated_questions.append(response)
                 questions_list = transform_json_dict(response)
                 for question in questions_list:
                     # Directly check if the response format is valid
@@ -205,8 +224,67 @@ class QuizBuilder:
 
         self.vectorstore_manager.cleanup()
         
-        # Return the list of questions
+        # Return requested number of questions (or fewer if not enough were generated)
         return generated_questions[:num_questions]
+    
+    #new function to validate the response
+    def validate_response(self, response: dict) -> bool:
+        """
+        Validates the structure and content of a quiz question response.
+        
+        Args:
+            response (dict): The quiz question response to validate
+            
+        Returns:
+            bool: True if valid, False otherwise
+        """
+        try:
+            # Check if all required fields are present
+            required_fields = ['question', 'choices', 'answer', 'explanation']
+            if not all(field in response for field in required_fields):
+                logger.warning("Missing required fields") if self.verbose else None
+                return False
+            
+            # Validate choices
+            if not isinstance(response['choices'], dict):
+                logger.warning("Choices must be a dictionary") if self.verbose else None
+                return False
+            
+            # Validate that there are exactly 4 choices
+            if len(response['choices']) != 4:
+                logger.warning("Must have exactly 4 choices") if self.verbose else None
+                return False
+            
+            # Validate choice keys are A, B, C, D
+            valid_keys = set(['A', 'B', 'C', 'D'])
+            if set(response['choices'].keys()) != valid_keys:
+                logger.warning("Choice keys must be A, B, C, D") if self.verbose else None
+                return False
+            
+            # Validate answer is one of the valid keys
+            if response['answer'] not in valid_keys:
+                logger.warning("Answer must be one of: A, B, C, D") if self.verbose else None
+                return False
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Validation error: {str(e)}") if self.verbose else None
+            return False
+
+    def format_choices(self, choices: dict) -> dict:
+        """
+        Formats the choices to ensure they are in the correct order and structure.
+        
+        Args:
+            choices (dict): Dictionary of choices with keys A, B, C, D
+            
+        Returns:
+            dict: Formatted choices in correct order
+        """
+        ordered_keys = ['A', 'B', 'C', 'D']
+        return {key: choices[key] for key in ordered_keys if key in choices}
+
 
 class RetrieverFactory:
     
