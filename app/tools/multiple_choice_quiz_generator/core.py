@@ -18,7 +18,11 @@ def executor(topic: str,
     try:
         if verbose:
             logger.info(f"File URL loaded: {file_url}")
-
+        
+        # Handle local file paths
+        if not file_url.startswith(('http://', 'https://', 'file://')):
+            file_url = os.path.abspath(file_url)
+            
         docs = get_docs(file_url, file_type, lang, verbose=True)
 
     
