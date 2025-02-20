@@ -19,10 +19,12 @@ router = APIRouter()
 def read_root():
     from app.tools.multiple_choice_quiz_generator.core import executor
     
+    import os
+    
     quiz = executor(
         topic="Science Terms Vocabulary - 7th Grade Physics, Chemistry, and Biology",
         n_questions=10,
-        file_url="attached_assets/Science_Glossary.pdf",
+        file_url=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "attached_assets", "Science_Glossary.pdf"),
         file_type="pdf",
         lang="en"
     )
