@@ -38,7 +38,7 @@ def executor(grade_level: str,
             summary = get_summary(file_url, file_type, verbose=verbose)
     
         syllabus_args_model = SyllabusGeneratorArgsModel(
-            grade_level = grade_level,
+            grade_level = grade_level, 
             subject = subject,
             course_description = course_description,
             objectives = objectives,

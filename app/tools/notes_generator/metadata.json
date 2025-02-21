@@ -1,0 +1,36 @@
+{
+    "inputs": [
+        
+        {
+            "label": "Focus or Topic",
+            "name": "focus",
+            "type": "text"
+        },
+        {
+            "label": "Page Layout",
+            "name": "page_layout",
+            "type": "text"
+        },    
+        {
+            "label": "Text Input",
+            "name": "text_input",
+            "type": "text"
+        },
+        {
+            "label": "File Upload Type",
+            "name": "file_upload_type",
+            "type": "text"
+        },
+        {
+            "label": "File Upload URL",
+            "name": "file_upload_url",
+            "type": "text"
+        },
+      
+        {
+            "label": "Language",
+            "name": "lang",
+            "type": "text"
+        }
+    ]
+}

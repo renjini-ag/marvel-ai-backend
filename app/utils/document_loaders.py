@@ -53,7 +53,9 @@ def get_docs(file_url: str, file_type: str, lang: str = "en", verbose=True):
         try:
             # Make a HEAD request to get content type
             head_response = requests.head(file_url, allow_redirects=True)
+            logger.info(f"HEAD request response: {head_response.status_code}")
             content_type = head_response.headers.get('Content-Type') 
+            logger.info(f"Content-Type: {content_type}")
             if content_type is None:
                 raise FileHandlerError(f"Failed to retrieve Content-Type from URL ", file_url)
             # If the content type is HTML

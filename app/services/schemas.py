@@ -154,3 +154,11 @@ class WritingFeedbackGeneratorArgs(BaseModel):
     writing_to_review_file_url: str
     writing_to_review_file_type: str
     lang: Optional[str] = "en"
+
+class NoteGeneratorArgs(BaseModel):
+    focus: str
+    page_layout: str
+    text_input: str
+    file_upload_type: str
+    file_upload_url: str
+    lang: Optional[str] = "en"
