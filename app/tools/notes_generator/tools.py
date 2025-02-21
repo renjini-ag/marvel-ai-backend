@@ -111,7 +111,7 @@ class NoteGeneratorPipeline:
             self.compile_vectorstore(documents)
             query = "Provide general context for the topic to create notes."
             context = self.generate_context(query)
-            print("context",context)
+            
         else:
             context = ""  # Use manually provided text if no file is uploaded
 

@@ -29,21 +29,21 @@ mock_parser = JsonOutputParser(pydantic_object=BulletPoints)
 
 
 #Test the executor function (Integration test)
-# def test_executor_normal_operation():
-#     """Test the executor function with valid inputs."""
-#     result = executor(
-#         focus=base_attributes["focus"],
-#         page_layout=base_attributes["page_layout"],
-#         text_input=base_attributes["text_input"],
-#         file_upload_type=base_attributes["file_upload_type"],
-#         file_upload_url=base_attributes["file_upload_url"],
-#         lang=base_attributes["lang"],
-#         verbose=False        
-#     )
+def test_executor_normal_operation():
+    """Test the executor function with valid inputs."""
+    result = executor(
+        focus=base_attributes["focus"],
+        page_layout=base_attributes["page_layout"],
+        text_input=base_attributes["text_input"],
+        file_upload_type=base_attributes["file_upload_type"],
+        file_upload_url=base_attributes["file_upload_url"],
+        lang=base_attributes["lang"],
+        verbose=False        
+    )
     
-#     assert isinstance(result, GenerateNotesOutput)
-#     assert hasattr(result, "title")
-#     assert hasattr(result, "notes")
+    assert isinstance(result, GenerateNotesOutput)
+    assert hasattr(result, "title")
+    assert hasattr(result, "notes")
 
 
 
