@@ -1,14 +1,13 @@
 from typing import List, Dict
 import os
-
+from operator import itemgetter
+from pydantic import BaseModel, Field
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
 from langchain_core.prompts import PromptTemplate
-from langchain_core.runnables import RunnablePassthrough, RunnableParallel, RunnableLambda
+from langchain_core.runnables import RunnableParallel, RunnableLambda
 from langchain_core.output_parsers import JsonOutputParser, BaseOutputParser
-from pydantic import BaseModel, Field
-from langchain_google_genai import GoogleGenerativeAI
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from langsmith import traceable
 
@@ -80,41 +79,72 @@ class QuizBuilderConfig:
 
 class QuizBuilder:
             
-    def __init__(self, topic: str, lang: str ='en', config: QuizBuilderConfig = None, verbose: bool = False):
-
+    def __init__(
+        self, 
+        topic: str, 
+        n_questions: int, 
+        grade_level: str, 
+        quiz_description: str = "", 
+        lang: str ='en', 
+        config: QuizBuilderConfig = None, 
+        verbose: bool = False
+    ):
         """
             Initialize the QuizBuilder with configuration and models.
             
             Args:
                 topic (str): The main topic for quiz questions
+                n_questions (int): The number of questions to generate
+                grade_level (str): The grade level for the quiz
+                quiz_description (str): Description of the quiz (default: "")
                 lang (str): Language code for question generation (default: 'en')
                 config (QuizBuilderConfig): Configuration object for the quiz builder (default: None)   
                 verbose (bool): Enable detailed logging (default: False)
         """
         self.topic = topic
         self.lang = lang
-        self.config = config or QuizBuilderConfig(verbose=verbose)
+        self.n_questions = n_questions
+        self.grade_level = grade_level
+        self.quiz_description = quiz_description
 
+        self.config = config or QuizBuilderConfig(verbose=verbose)
         self.verbose = verbose
         self.runner = None
         self._model = self.config.model
         self._prompt_template = self.config.prompt_template
         self._parser = self.config.parser
 
-
         # Initialize components
         self.vectorstore_manager = VectorStoreManager(self.config)
         self.retriever_factory = RetrieverFactory(self.config)
 
         if topic is None: raise ValueError("Topic must be provided")
+
+    def get_optional_instructions(self, input_name: str, input_value: str) -> str:
+        """
+        Get the optional instructions for a given input variable.
+        
+        Args:
+            input_name (str): The name of the input variable
+            input_value (str): The value of the input variable
+        
+        Returns:
+            str: The optional instructions for the input variable
+        """
+        OPT_INSTRUCTIONS_TEMPLATE = {
+            "quiz_description": "- Assessment Description: %s"
+        }
+        if input_name in OPT_INSTRUCTIONS_TEMPLATE:
+            return OPT_INSTRUCTIONS_TEMPLATE[input_name] % input_value
+        else:
+            return ""
     
-    def compile(self, documents: List[Document], num_questions: int):
+    def compile(self, documents: List[Document]) -> RunnableParallel:
         """
         Compile the question generation chain using the provided documents.
         
         Args:
             documents (List[Document]): List of documents to use as context
-            num_questions (int): Number of questions to generate per prompt (default: 1)
             
         Returns:
             Chain: A compiled LangChain chain for question generation
@@ -122,74 +152,82 @@ class QuizBuilder:
         # Initialize prompt template with all required variables
         prompt = PromptTemplate(
             template=self._prompt_template,
-            input_variables=["attribute_collection", "context", "num_questions"],
-            partial_variables={"format_instructions": self._parser.get_format_instructions()}
-        )
+            input_variables=["topic", "lan", "context", "num_questions", "grade_level", "quiz_description"],
+            partial_variables={"format_instructions": self._parser.get_format_instructions()})
 
         number_documents = len(documents)
 
         # Create vector store and retriever if not already initialized
         if self.runner is None:
-            # Log vector store creation if verbose mode is enabled
             vectorstore = self.vectorstore_manager.create_vectorstore(documents)
-            retriever_k = number_documents
+            retriever_k = number_documents # Set the retriever k value to the number of documents
             retriever = self.retriever_factory.create_multiquery_retriever(
-                    vectorstore, num_questions, retriever_k)
-
-            # Set up parallel running configuration with all required components
-            self.runner = RunnableParallel(
-                {
-                "context": retriever, # Retrieves relevant context from documents
-                "attribute_collection": RunnablePassthrough(),  # Passes through the topic and language
-                "num_questions": lambda _: str(num_questions)  # Converts num_questions to string for template
-                }
+                vectorstore, 
+                self.n_questions, 
+                retriever_k
             )
 
-        trace_metadata = {
-            "number_documents": number_documents,
-            "n_questions": num_questions,
-            "topic": self.topic,
-            "lang": self.lang,
-            "score_threshold": self.config.score_threshold
-        }
+            # Set up parallel running to pass all required variables for prompt
+            self.runner = RunnableParallel(
+                {
+                    "context": itemgetter("topic") |  retriever, # Retrieves relevant context from documents
+                    "topic": itemgetter("topic"),  # Passes through the topic
+                    "lang": itemgetter("lang"),  # Passes through the language
+                    "num_questions": itemgetter("n_questions"),  # Passes through the number of questions
+                    "grade_level": itemgetter("grade_level"),  # Passes through the grade level
+                    "quiz_description": 
+                        lambda input : self.get_optional_instructions(
+                            "quiz_description", 
+                            input["quiz_description"])  # Passes through the quiz description
+                }
+            )
+        logger.info(f"Runner initialized") if self.verbose else None
 
         # Compile the full chain: runner -> prompt -> model -> parser
-        chain = (self.runner | prompt | self._model | self._parser).with_config(trace_metadata)
+        chain = (self.runner | prompt | self._model | self._parser)
         
         logger.info(f"Chain compilation complete") if self.verbose else None
         
         return chain
 
-    def create_questions(self, documents: List[Document], num_questions: int = 5) -> List[Dict]:
+    def create_questions(self, documents: List[Document]) -> List[Dict]:
         """
         Generate multiple-choice quiz questions based on the provided documents.
         
         Args:
             documents (List[Document]): List of documents to use as context
-            num_questions (int): Number of questions to generate (default: 5)
             
         Returns:
             List[Dict]: List of generated quiz questions with choices and answers
         """
-        logger.info(f"Creating {num_questions} questions") if self.verbose else None
+        logger.info(f"Creating {self.n_questions} questions") if self.verbose else None
      
-        if num_questions > self.config.max_questions:
+        if self.n_questions > self.config.max_questions:
             return {"message": "error", "data": f"Number of questions cannot exceed {self.config.max_questions}"}
         
         try:
-            chain = self.compile(documents, num_questions)
+            chain = self.compile(documents)
 
-            generated_questions = self.run_chain(chain)
+            user_input = {
+                "n_questions": self.n_questions,
+                "topic": self.topic,
+                "lang": self.lang,
+                "grade_level": self.grade_level,
+                "quiz_description": self.quiz_description
+            }
+            generated_questions = self.run_chain(chain, user_input)
 
             number_gen_questions = len(generated_questions)
             logger.info(f"Total generated questions: {number_gen_questions}") if self.verbose else None
             
             # Log if fewer questions are generated
-            if number_gen_questions < num_questions:
-                if self.verbose: logger.warning(f"Only generated {number_gen_questions} out of {num_questions} requested questions")
+            if number_gen_questions < self.n_questions:
+                if self.verbose: 
+                    logger.warning(f"Only generated {number_gen_questions} out of "
+                                   "{self.n_questions} requested questions")
             
             # Return requested number of questions (or fewer if not enough were generated)
-            return generated_questions[:num_questions]
+            return generated_questions[:self.n_questions]
         except Exception as e:
             if self.verbose:
                 logger.error(f"Error generating questions: {e}")
@@ -198,7 +236,14 @@ class QuizBuilder:
             self.cleanup()
 
     
-    def run_chain(self, chain):
+    def run_chain(self, chain: RunnableParallel, user_input: dict) -> List[Dict]:
+        """
+        Run the LangChain pipeline to generate quiz questions.
+
+        Args:
+            chain (RunnableParallel): The compiled LangChain pipeline
+            user_input (dict): The input data for the pipeline
+        """
         generated_questions = []
         attempts = 0
         max_attempts = self.config.max_attempts  # Allow for more attempts to generate questions
@@ -210,7 +255,7 @@ class QuizBuilder:
 
             try:
                 # Run the pipeline with the provided input data
-                response = chain.invoke(f"Topic: {self.topic}, Lang: {self.lang}")
+                response = chain.invoke(user_input)
         
                 logger.info(f"Generated response: {response}") if self.verbose else None
 
@@ -383,7 +428,8 @@ class RetrieverFactory:
         vectorstore,
         num_questions: int,
         retriever_k: int,
-        score_threshold: float = None
+        score_threshold: float = None,
+        only_page_content: bool = True
     ) -> MultiQueryRetriever:
         if self.verbose:
             logger.info("Setting up MultiQueryRetriever")
@@ -406,8 +452,20 @@ class RetrieverFactory:
             
             factory = self
             def wrapper_retriever(inputs):
+                if self.verbose:
+                    logger.info(f"Invoking enhanced retriever with inputs: {inputs}")
+
                 retrieved_docs = retriever.invoke(inputs)
                 factory.number_retrieved_docs = len(retrieved_docs)
+
+                if self.verbose:
+                    logger.info(f"Retrieved {factory.number_retrieved_docs} documents")
+
+                if only_page_content:
+                    if self.verbose:
+                        logger.info("Returning only page content")
+                    return [doc.page_content for doc in retrieved_docs]
+                
                 return retrieved_docs
 
             return RunnableLambda(wrapper_retriever)

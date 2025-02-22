@@ -8,4 +8,4 @@ Consider the following when rephrasing:
 The goal is to maximize the likelihood of retrieving relevant documents from the database by generating diverse and inclusive queries. 
 Provide the alternative queries separated by newlines.
 
-{question}
+Quiz topic: {question}

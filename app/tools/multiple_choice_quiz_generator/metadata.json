@@ -1,35 +1,39 @@
 {
-    "inputs": [
-        {
-            "label": "Topic",
-            "name": "topic",
-            "type": "text"
-        },
-        {
-            "label": "Quiz Description",
-            "name": "quiz_description",
-            "type": "text",
-            "default": "This multiple-choice quiz is designed to assess knowledge on a selected topic while aligning with state educational standards. Each question includes four answer choices (A, B, C, and D), with immediate feedback on correctness. At the end of the quiz, participants will receive a score report along with an answer key. The quiz can be customized to include user-defined questions and relevant state standards (e.g., TEKS, Common Core). Optional enhancements include timed questions, difficulty levels, and question bank storage."
-        },
-        {
-            "label": "Number of Questions",
-            "name": "n_questions",
-            "type": "number"
-        },
-        {
-            "label": "File URL",
-            "name": "file_url",
-            "type": "text"
-        },
-        {
-            "label": "File Type",
-            "name": "file_type",
-            "type": "text"
-        },
-        {
-            "label": "Language",
-            "name": "lang",
-            "type": "text"
-        }
-    ]
+	"inputs": [
+		{
+			"label": "Topic",
+			"name": "topic",
+			"type": "text"
+		},
+		{
+			"label": "Number of Questions",
+			"name": "n_questions",
+			"type": "number"
+		},
+		{
+			"label": "File URL",
+			"name": "file_url",
+			"type": "text"
+		},
+		{
+			"label": "File Type",
+			"name": "file_type",
+			"type": "text"
+		},
+		{
+			"label": "Language",
+			"name": "lang",
+			"type": "text"
+		},
+		{
+			"label": "Grade Level",
+			"name": "grade_level",
+			"type": "text"
+		},
+		{
+			"label": "Quiz Description",
+			"name": "quiz_description",
+			"type": "text"
+		}
+	]
 }
