@@ -45,84 +45,7 @@ class SlideGenerator:
         if vectorstore_class is None: raise ValueError("Vectorstore must be provided")
        
 
-        # # Return the chain
-        # prompt = PromptTemplate(
-        #     template=self.prompt,
-        #     input_variables=["attribute_collection"],
-        #     partial_variables={"format_instructions": self.parser.get_format_instructions()}
-        # )
-
-        # if self.runner is None:
-        #     logger.info(f"Creating vectorstore from {len(documents)} documents") if self.verbose else None
-        #     self.vectorstore = self.vectorstore_class.from_documents(documents, self.embedding_model)
-        #     logger.info(f"Vectorstore created") if self.verbose else None
-
-        #     self.retriever = self.vectorstore.as_retriever()
-        #     logger.info(f"Retriever created successfully") if self.verbose else None
-
-        #     self.runner = RunnableParallel(
-        #         {"context": self.retriever,
-        #         "attribute_collection": RunnablePassthrough()
-        #         }
-        #     )
-
-        # chain = self.runner | prompt | self.model | self.parser
-
-        # logger.info(f"Chain compilation complete")
-
-        # return chain
-#   def validate_slides_content(self,response, topic, instructional_level):
-        # """Validates that slide content matches the requested topic and level."""
-        # # Check if topic keywords appear in slides
-        # topic_keywords = set(topic.lower().split())
-        
-        # # Track coverage metrics
-        # topic_coverage = 0
-        # garbage_coverage =0
-        # template_requirements_met = False
-        # slides = response["slides"]
-        # whole_text_generated = ""
-
-        # for slide in slides:
-        #     # Check topic relevance
-
-        #     if slide["template"] == "twoColumn":
-        #          # Check template requirements
-        #         template_requirements_met = True
-        #         slide_text = (slide['title']+ " " + (slide["content"]["leftColumn"] or "") + " " + (slide["content"]["rightColumn"]or "")).lower()
-        #         whole_text_generated += slide_text
-               
-                
-        #     elif slide["template"] == "titleAndBullets":      
-        #         contents = slide["content"]          
-        #         slide_text = (slide['title'] + " " + " ".join(content for content  in contents)).lower()
-        #         whole_text_generated += slide_text
-
-        #     elif slide["template"] == "sectionHeader":      
-        #         slide_text = (slide['title'] + " " + (slide["content"]["title"] or "")+ " " +(slide["content"]["subtitle"] if slide["content"]["subtitle"] else " " )).lower()
-        #         whole_text_generated += slide_text
-        #     else:
-        #         slide_text = (slide['title'] + " " + (slide["content"] or "")).lower()
-        #         whole_text_generated += slide_text
-        #      #check if there are any * or /n in the slides
-        #     if "*" in whole_text_generated or "\n" in whole_text_generated:
-        #         garbage_coverage += 1
-        #     matches = sum(1 for keyword in topic_keywords if keyword in slide_text)
-        #     if matches > 0:
-        #         topic_coverage += 1
-          
-              
-        
-        # # Calculate coverage percentage
-        # coverage_percentage = (topic_coverage / len(response["slides"])) * 100
-        # garbage_coverage_percentage = (garbage_coverage / len(response["slides"])) * 100
-        # return {
-        #     "topic_coverage": coverage_percentage,
-        #     "template_requirements_met": template_requirements_met,
-        #     "garbage_coverage_percentage": garbage_coverage_percentage,
-        #     "valid": coverage_percentage > 70 and template_requirements_met and garbage_coverage_percentage ==0
-        # }
-   
+      
 
     def validate_slides_content(self, response, topic):
         """Validates that slide content matches the requested topic and level."""
@@ -166,11 +89,7 @@ class SlideGenerator:
             
         except ValueError as e:
             raise ValueError(e)
-        # def clean_text(text):
-        #     """Removes Markdown formatting and newlines from the text."""
-        #     text = re.sub(r'[*_`#>-]', '', text)  # Remove Markdown symbols
-        #     text = re.sub(r'\n+', ' ', text)  # Replace newlines with space
-        #     return text.strip()
+
         
         
 
@@ -181,7 +100,6 @@ class SlideGenerator:
             input_variables=["instructional_level", "topic", "slides_titles"],
             partial_variables={"format_instructions": self.parser.get_format_instructions()}
         )
-
         chain = prompt | self.model | self.parser
 
         logger.info(f"Chain compilation complete")
@@ -191,8 +109,7 @@ class SlideGenerator:
     def generate_slides(self):
         logger.info(f"Creating the Outlines for the Presentation") 
 
-        chain = self.compile_with_context()
-        
+        chain = self.compile_with_context() 
 
         input_parameters = {
             "instructional_level": self.args.instructional_level,

@@ -23,17 +23,17 @@ def read_text_file(file_path):
         return file.read()
     
 class OutlineGenerator:
-    def __init__(self, args=None, vectorstore_class=Chroma, prompt=None, embedding_model=None, model=None, parser=None, verbose=False):
+    def __init__(self, args=None, vectorstore_class=Chroma, embedding_model=None, model=None, parser=None, verbose=False):
         default_config = {
             "model": GoogleGenerativeAI(model="gemini-1.5-flash"),
             "embedding_model": GoogleGenerativeAIEmbeddings(model='models/embedding-001'),
             "parser": JsonOutputParser(pydantic_object=Outlines),
-            "prompt": read_text_file("prompt/outline_prompt.txt"),
+            "prompt_with_context": read_text_file("prompt/outline_prompt_with_context.txt"),
             "prompt_without_context": read_text_file("prompt/outline_prompt.txt"),
             "vectorstore_class": Chroma
         }
 
-        self.prompt = prompt or default_config["prompt"]
+        self.prompt_with_context =  default_config["prompt_with_context"]
         self.prompt_without_context = default_config["prompt_without_context"]
         self.model = model or default_config["model"]
         self.parser = parser or default_config["parser"]
@@ -43,7 +43,8 @@ class OutlineGenerator:
         self.vectorstore, self.retriever, self.runner = None, None, None
         self.args = args
         self.verbose = verbose
-
+        self.context = None
+        
         if vectorstore_class is None: raise ValueError("Vectorstore must be provided")
         if args.topic is None: raise ValueError("Topic must be provided")
         if args.lang is None: raise ValueError("Language must be provided")
@@ -51,8 +52,8 @@ class OutlineGenerator:
     def compile_with_context(self, documents: List[Document]):
         # Return the chain
         prompt = PromptTemplate(
-            template=self.prompt,
-            input_variables=["attribute_collection"],
+            template=self.prompt_with_context,
+            input_variables=["instructional_level", "n_slides", "topic","context"],
             partial_variables={"format_instructions": self.parser.get_format_instructions()}
         )
 
@@ -61,20 +62,17 @@ class OutlineGenerator:
             self.vectorstore = self.vectorstore_class.from_documents(documents, self.embedding_model)
             logger.info(f"Vectorstore created") if self.verbose else None
 
-            self.retriever = self.vectorstore.as_retriever()
+            retriever = self.vectorstore.as_retriever()
             logger.info(f"Retriever created successfully") if self.verbose else None
-
-            self.runner = RunnableParallel(
-                {"context": self.retriever,
-                "attribute_collection": RunnablePassthrough()
-                }
-            )
-
-        chain = self.runner | prompt | self.model | self.parser
+            query = "Provide general context for the topic to create notes."
+            self.context = retriever.invoke(query)
+            
+        chain = prompt | self.model | self.parser
 
         logger.info(f"Chain compilation complete")
 
         return chain
+
     
     def compile_without_context(self):
         # Return the chain
@@ -103,7 +101,8 @@ class OutlineGenerator:
             "instructional_level": self.args.instructional_level,
             "n_slides": self.args.n_slides,
             "topic": self.args.topic,
-            "lang": self.args.lang
+            "lang": self.args.lang,
+            "context":self.context
         }
         logger.info(f"Input parameters: {input_parameters}")
 
@@ -114,7 +113,6 @@ class OutlineGenerator:
         if(documents):
             if self.verbose: print(f"Deleting vectorstore")
             self.vectorstore.delete_collection()
-        print("type",type(response))
         return response
 
 

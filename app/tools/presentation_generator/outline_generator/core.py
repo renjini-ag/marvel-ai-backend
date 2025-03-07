@@ -21,15 +21,23 @@ def executor(
          
         if(n_slides and topic and instructional_level):
             logger.info(f"Generating slide outlines. from {topic} for {instructional_level} level")
+            #CHECKING IF BOTH FILE UPLOAD URL AND FILE UPLOAD TYPE ARE PROVIDED
+        if bool(file_upload_url) != bool(file_upload_type):
+            missing = "file_upload_type" if file_upload_url else "file_upload_url"
+            provided = "file_upload_url" if file_upload_url else "file_upload_type"
+            message = f"{provided} provided but {missing} is missing"
+            logger.info(message)
+            raise ValueError(message)
         if(file_upload_url and file_upload_type):
             logger.info(f"Fetching documents from {file_upload_url} of type {file_upload_type}")
+
         docs = None
+        
 
         def fetch_docs(file_url, file_type):
             return get_docs(file_url, file_type, True) if file_url and file_type else None
 
-        docs = fetch_docs(file_type=file_upload_type, file_url=file_upload_url)
-        
+        docs = fetch_docs(file_type=file_upload_type, file_url=file_upload_url)        
 
 
         presentation_generator_args = OutlineGeneratorInput(
@@ -40,7 +48,7 @@ def executor(
             file_upload_type=file_upload_type,
             lang=lang
         )
-        print("docs", docs)
+     
         output = OutlineGenerator(args=presentation_generator_args, verbose=verbose).generate_outline(docs)
 
         logger.info(f"Presentation generated successfully")
