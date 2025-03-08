@@ -70,8 +70,7 @@ class QuizQuestion(BaseModel):
 ```
 
 ### PDF:
-
-```json
+```json 
 {
 	"user": {
 		"id": "string",
@@ -108,7 +107,7 @@ class QuizQuestion(BaseModel):
 			},
 			{
 				"name": "quiz_description",
-				"value": "This multiple-choice quiz should assess students’ understanding of key concepts in Linear Algebra, with a focus on topics relevant to Linear Regression as covered in the provided document. The questions should test their knowledge of matrix operations, vector spaces, and transformations, ensuring they can apply these concepts in practical scenarios."
+				"value": "This multiple-choice quiz assesses students' understanding of key concepts in Linear Algebra, focusing on topics related to Linear Regression as covered in the provided document. It tests knowledge of matrix operations, vector spaces, and transformations, ensuring practical application."
 			}
 		]
 	}
@@ -118,230 +117,230 @@ class QuizQuestion(BaseModel):
 ### Structured Data (EXCEL):
 
 ```json
-{
-	"user": {
-		"id": "string",
-		"fullName": "string",
-		"email": "string"
-	},
-	"type": "tool",
-	"tool_data": {
-		"tool_id": "multiple-choice-quiz-generator",
-		"inputs": [
-			{
-				"name": "topic",
-				"value": "Countries"
-			},
-			{
-				"name": "n_questions",
-				"value": 3
-			},
-			{
-				"name": "file_url",
-				"value": "https://github.com/AaronSosaRamos/mission-flights/raw/main/files-for-test/Free_Test_Data_1MB_XLSX.xlsx"
-			},
-			{
-				"name": "file_type",
-				"value": "xlsx"
-			},
-			{
-				"name": "lang",
-				"value": "en"
-			},
-			{
-				"name": "grade_level",
-				"value": "High School"
-			},
-			{
-				"name": "quiz_description",
-				"value": "This multiple-choice quiz should evaluate students’ knowledge of countries, including their geography, capitals, populations, and other key attributes. The questions should be derived from the provided Excel file, ensuring they align with factual data. The quiz should be in English and contain three well-structured questions that challenge students to interpret and analyze country-related information from the dataset."
-			}
-		]
-	}
+{ 
+   "user": {
+      "id": "string",
+      "fullName": "string",
+      "email": "string"
+   },
+   "type": "tool",
+   "tool_data": {
+      "tool_id": "multiple-choice-quiz-generator",
+      "inputs": [
+         {
+            "name": "topic",
+            "value": "Countries"
+         },
+         {
+            "name": "n_questions",
+            "value": 3
+         },
+         {
+            "name": "file_url",
+            "value": "https://github.com/AaronSosaRamos/mission-flights/raw/main/files-for-test/Free_Test_Data_1MB_XLSX.xlsx"
+         },
+         {
+            "name": "file_type",
+            "value": "xlsx"
+         },
+         {
+            "name": "lang",
+            "value": "en"
+         },
+         {
+            "name": "grade_level",
+            "value": "high school"
+         },
+         {
+            "name": "quiz_description",
+            "value": "This multiple-choice quiz evaluates knowledge about different countries, their capitals, populations, and geographical data based on the provided Excel dataset."
+         }
+      ]
+   }
 }
 ```
 
 ### Youtube Videos:
 
 ```json
-{
-	"user": {
-		"id": "string",
-		"fullName": "string",
-		"email": "string"
-	},
-	"type": "tool",
-	"tool_data": {
-		"tool_id": "multiple-choice-quiz-generator",
-		"inputs": [
-			{
-				"name": "topic",
-				"value": "Machine Learning"
-			},
-			{
-				"name": "n_questions",
-				"value": 3
-			},
-			{
-				"name": "file_url",
-				"value": "https://www.youtube.com/watch?v=HgBpFaATdoA"
-			},
-			{
-				"name": "file_type",
-				"value": "youtube_url"
-			},
-			{
-				"name": "lang",
-				"value": "en"
-			},
-			{
-				"name": "grade_level",
-				"value": "college"
-			},
-			{
-				"name": "quiz_description",
-				"value": "This multiple-choice quiz should evaluate students’ understanding of Machine Learning concepts based on the provided YouTube video. The questions should cover fundamental ML principles, including supervised and unsupervised learning, model training, evaluation metrics, and real-world applications. The quiz should be in English and consist of three well-structured questions that test theoretical knowledge and practical insights from the video content."
-			}
-		]
-	}
+{ 
+   "user": {
+      "id": "string",
+      "fullName": "string",
+      "email": "string"
+   },
+   "type": "tool",
+   "tool_data": {
+      "tool_id": "multiple-choice-quiz-generator",
+      "inputs": [
+         {
+            "name": "topic",
+            "value": "Machine Learning"
+         },
+         {
+            "name": "n_questions",
+            "value": 3
+         },
+         {
+            "name": "file_url",
+            "value": "https://www.youtube.com/watch?v=HgBpFaATdoA"
+         },
+         {
+            "name": "file_type",
+            "value": "youtube_url"
+         },
+         {
+            "name": "lang",
+            "value": "en"
+         },
+         {
+            "name": "grade_level",
+            "value": "college"
+         },
+         {
+            "name": "quiz_description",
+            "value": "This quiz assesses students' understanding of fundamental machine learning concepts as explained in the provided YouTube video. Topics include supervised learning, unsupervised learning, and neural networks."
+         }
+      ]
+   }
 }
 ```
 
 ### Google Drive (GDocs):
 
 ```json
-{
-	"user": {
-		"id": "string",
-		"fullName": "string",
-		"email": "string"
-	},
-	"type": "tool",
-	"tool_data": {
-		"tool_id": "multiple-choice-quiz-generator",
-		"inputs": [
-			{
-				"name": "topic",
-				"value": "OpenAI"
-			},
-			{
-				"name": "n_questions",
-				"value": 3
-			},
-			{
-				"name": "file_url",
-				"value": "https://docs.google.com/document/d/1DkOTKlHnZC6Us2N-ZHgECsQezYoB49af/edit?usp=drive_link&ouid=107052763106493355624&rtpof=true&sd=true"
-			},
-			{
-				"name": "file_type",
-				"value": "gdoc"
-			},
-			{
-				"name": "lang",
-				"value": "en"
-			},
-			{
-				"name": "grade_level",
-				"value": "college"
-			},
-			{
-				"name": "quiz_description",
-				"value": "This multiple-choice quiz should assess students’ understanding of OpenAI based on the provided document. The questions should cover key aspects of OpenAI, including its mission, technologies, AI models, and applications. Topics may include GPT models, ethical considerations, machine learning principles, and the impact of AI on various industries. The quiz should consist of well-structured questions that test both theoretical knowledge and practical applications of OpenAI’s technologies."
-			}
-		]
-	}
+{ 
+   "user": {
+      "id": "string",
+      "fullName": "string",
+      "email": "string"
+   },
+   "type": "tool",
+   "tool_data": {
+      "tool_id": "multiple-choice-quiz-generator",
+      "inputs": [
+         {
+            "name": "topic",
+            "value": "OpenAI"
+         },
+         {
+            "name": "n_questions",
+            "value": 3
+         },
+         {
+            "name": "file_url",
+            "value": "https://docs.google.com/document/d/1DkOTKlHnZC6Us2N-ZHgECsQezYoB49af/edit?usp=drive_link&ouid=107052763106493355624&rtpof=true&sd=true"
+         },
+         {
+            "name": "file_type",
+            "value": "gdoc"
+         },
+         {
+            "name": "lang",
+            "value": "en"
+         },
+         {
+            "name": "grade_level",
+            "value": "college"
+         },
+         {
+            "name": "quiz_description",
+            "value": "This quiz evaluates students' comprehension of OpenAI's capabilities, research focus, and AI applications based on the provided Google Doc."
+         }
+      ]
+   }
 }
 ```
 
 ### Google Drive (GPDF):
 
 ```json
-{
-	"user": {
-		"id": "string",
-		"fullName": "string",
-		"email": "string"
-	},
-	"type": "tool",
-	"tool_data": {
-		"tool_id": "multiple-choice-quiz-generator",
-		"inputs": [
-			{
-				"name": "topic",
-				"value": "OpenAI"
-			},
-			{
-				"name": "n_questions",
-				"value": 3
-			},
-			{
-				"name": "file_url",
-				"value": "https://drive.google.com/file/d/1JIZxgX4aLUUl5bHy5SE8OK7Eg9tT1ZkA/view?usp=drive_link"
-			},
-			{
-				"name": "file_type",
-				"value": "gpdf"
-			},
-			{
-				"name": "lang",
-				"value": "en"
-			},
-			{
-				"name": "grade_level",
-				"value": "college"
-			},
-			{
-				"name": "quiz_description",
-				"value": "This multiple-choice quiz should assess students’ understanding of OpenAI based on the provided document. The questions should cover key aspects of OpenAI, including its mission, technologies, AI models, and applications. Topics may include GPT models, ethical considerations, machine learning principles, and the impact of AI on various industries. The quiz should consist of well-structured questions that test both theoretical knowledge and practical applications of OpenAI’s technologies."
-			}
-		]
-	}
+{ 
+   "user": {
+      "id": "string",
+      "fullName": "string",
+      "email": "string"
+   },
+   "type": "tool",
+   "tool_data": {
+      "tool_id": "multiple-choice-quiz-generator",
+      "inputs": [
+         {
+            "name": "topic",
+            "value": "OpenAI"
+         },
+         {
+            "name": "n_questions",
+            "value": 3
+         },
+         {
+            "name": "file_url",
+            "value": "https://drive.google.com/file/d/1JIZxgX4aLUUl5bHy5SE8OK7Eg9tT1ZkA/view?usp=drive_link"
+         },
+         {
+            "name": "file_type",
+            "value": "gpdf"
+         },
+         {
+            "name": "lang",
+            "value": "en"
+         },
+         {
+            "name": "grade_level",
+            "value": "college"
+         },
+         {
+            "name": "quiz_description",
+            "value": "This multiple-choice quiz assesses knowledge of OpenAI’s key research areas, its AI models, and applications in various industries based on the provided PDF."
+         }
+      ]
+   }
 }
 ```
 
 ### Images:
 
 ```json
-{
-	"user": {
-		"id": "string",
-		"fullName": "string",
-		"email": "string"
-	},
-	"type": "tool",
-	"tool_data": {
-		"tool_id": "multiple-choice-quiz-generator",
-		"inputs": [
-			{
-				"name": "topic",
-				"value": "AWS Architecture"
-			},
-			{
-				"name": "n_questions",
-				"value": 3
-			},
-			{
-				"name": "file_url",
-				"value": "https://d2908q01vomqb2.cloudfront.net/fc074d501302eb2b93e2554793fcaf50b3bf7291/2022/04/22/586-P2-Fig-1-1024x538.png"
-			},
-			{
-				"name": "file_type",
-				"value": "img"
-			},
-			{
-				"name": "lang",
-				"value": "en"
-			},
-			{
-				"name": "grade_level",
-				"value": "college"
-			},
-			{
-				"name": "quiz_description",
-				"value": "The quiz should consist of well-structured questions that test conceptual and practical knowledge of AWS Architecture. The questions should focus on key AWS components, services, and best practices for cloud architecture. Topics may include networking, compute, storage, security, and scalability within AWS environments."
-			}
-		]
-	}
+{ 
+   "user": {
+      "id": "string",
+      "fullName": "string",
+      "email": "string"
+   },
+   "type": "tool",
+   "tool_data": {
+      "tool_id": "multiple-choice-quiz-generator",
+      "inputs": [
+         {
+            "name": "topic",
+            "value": "AWS Architecture"
+         },
+         {
+            "name": "n_questions",
+            "value": 3
+         },
+         {
+            "name": "file_url",
+            "value": "https://d2908q01vomqb2.cloudfront.net/fc074d501302eb2b93e2554793fcaf50b3bf7291/2022/04/22/586-P2-Fig-1-1024x538.png"
+         },
+         {
+            "name": "file_type",
+            "value": "img"
+         },
+         {
+            "name": "lang",
+            "value": "en"
+         },
+         {
+            "name": "grade_level",
+            "value": "college"
+         },
+         {
+            "name": "quiz_description",
+            "value": "This quiz tests knowledge of AWS cloud architecture by analyzing and interpreting the provided image, which contains a detailed architectural diagram of AWS services."
+         }
+      ]
+   }
 }
 ```
 
